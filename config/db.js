@@ -1,7 +1,7 @@
 const mysql = require('mysql2');
 
 const connection = mysql.createConnection({
-  host: 'localhost',
+  host: 'mysql.railway.internal',
   user: 'root',
   password: 'admin',
   database: 'clinic',
