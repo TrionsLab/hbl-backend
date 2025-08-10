@@ -14,6 +14,23 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working 🚀' });
 });
 
+app.get('/api/db-test', async (req, res) => {
+  try {
+    const connection = await mysql.createConnection({
+      host: process.env.MYSQLHOST,
+      user: process.env.MYSQLUSER,
+      password: process.env.MYSQLPASSWORD,
+      database: process.env.MYSQLDATABASE,
+      port: process.env.MYSQLPORT
+    });
+
+    const [rows] = await connection.query('SELECT NOW() AS now');
+    res.json({ message: 'DB Connected ✅', serverTime: rows[0].now });
+  } catch (err) {
+    res.status(500).json({ message: 'DB Connection Failed ❌', error: err.message });
+  }
+});
+
 // Routes
 app.use('/api/bills', billRoutes);
 app.use('/api/pc-doc-ref', referencesRoutes);
