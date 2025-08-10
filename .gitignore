@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+package-lock.json/
+frontend/package-lock.json
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

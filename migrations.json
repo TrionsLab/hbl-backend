@@ -1,0 +1,11 @@
+{
+  "database": "clinic",
+  "migrations": [
+    "CREATE DATABASE IF NOT EXISTS clinic;",
+    "USE clinic;",
+    "CREATE TABLE IF NOT EXISTS bills ( id INT PRIMARY KEY AUTO_INCREMENT, idNo VARCHAR(255), date DATE, time TIME, receptionist VARCHAR(255), name VARCHAR(255), age INT, ageMonths INT, gender VARCHAR(255), phone VARCHAR(255), billType VARCHAR(255), doctor VARCHAR(255), referralDoctorFee DECIMAL(10,2), referralDoctorName VARCHAR(255), referralPcName VARCHAR(255), referralPcFee DECIMAL(10,2), grossAmount DECIMAL(10,2), discount DECIMAL(10,2), extraDiscount DECIMAL(10,2), due DECIMAL(10,2), totalAmount DECIMAL(10,2), selectedTests JSON DEFAULT (JSON_ARRAY()), createdAt DATETIME DEFAULT CURRENT_TIMESTAMP );",
+    "CREATE TABLE IF NOT EXISTS deleted_bills ( id INT PRIMARY KEY AUTO_INCREMENT, idNo VARCHAR(255), date DATE, time TIME, receptionist VARCHAR(255), name VARCHAR(255), age INT, ageMonths INT, gender VARCHAR(255), phone VARCHAR(255), billType VARCHAR(255), doctor VARCHAR(255), referralDoctorFee DECIMAL(10,2), referralDoctorName VARCHAR(255), referralPcName VARCHAR(255), referralPcFee DECIMAL(10,2), grossAmount DECIMAL(10,2), discount DECIMAL(10,2), extraDiscount DECIMAL(10,2), due DECIMAL(10,2), totalAmount DECIMAL(10,2), selectedTests JSON DEFAULT (JSON_ARRAY()), createdAt DATETIME DEFAULT CURRENT_TIMESTAMP, deletedAt DATETIME NOT NULL );",
+    "CREATE TABLE IF NOT EXISTS pc_doc_references ( id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(255) NOT NULL, code VARCHAR(255) NOT NULL UNIQUE, type VARCHAR(255) NOT NULL );",
+    "CREATE TABLE IF NOT EXISTS users ( id INT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, role ENUM('admin', 'user') DEFAULT 'user' );"
+  ]
+}
