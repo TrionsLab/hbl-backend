@@ -17,11 +17,11 @@ app.get('/api/test', (req, res) => {
 app.get('/api/db-test', async (req, res) => {
   try {
     const connection = await mysql.createConnection({
-      host: process.env.MYSQLHOST,
-      user: process.env.MYSQLUSER,
-      password: process.env.MYSQLPASSWORD,
-      database: process.env.MYSQLDATABASE,
-      port: process.env.MYSQLPORT
+      port: '3306',
+      host: 'mysql.railway.internal',
+      user: 'root',
+      password: 'admin',
+      database: 'clinic',
     });
 
     const [rows] = await connection.query('SELECT NOW() AS now');
