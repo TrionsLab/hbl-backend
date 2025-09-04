@@ -1,8 +1,7 @@
 # Node modules
 node_modules/
 
-package-lock.json/
-frontend/package-lock.json
+package-lock.json
 
 # Build output
 dist/

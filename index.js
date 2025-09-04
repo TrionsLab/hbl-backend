@@ -1,40 +1,36 @@
-const express = require('express');
-const cors = require('cors');
-const billRoutes = require('./routes/billRoutes');
-const referencesRoutes = require('./routes/referenceRoutes');
-const deletedBillRoutes = require('./routes/deletedBillRoutes');
-const mysql = require('mysql2/promise');
+const express = require("express");
+const cors = require("cors");
+const { server } = require("./config/config");
+const apiRoutes = require("./mainRoutes");
 
 const app = express();
 
-app.use(cors());
+// CORS
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || server.allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+
+// JSON parser
 app.use(express.json());
 
-// Test route
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'API is working 🚀' });
+// Health check
+app.get("/", (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.status(200).send("<h1>DOGMA Diagnostic API is running ✅</h1>");
 });
 
-app.get('/api/db-test', async (req, res) => {
-  try {
-    const connection = await mysql.createConnection({
-      port: '3306',
-      host: 'mysql.railway.internal',
-      user: 'root',
-      password: 'admin',
-      database: 'clinic',
-    });
+// API routes (all centralized in routes/index.js)
+app.use("/api", apiRoutes);
 
-    const [rows] = await connection.query('SELECT NOW() AS now');
-    res.json({ message: 'DB Connected ✅', serverTime: rows[0].now });
-  } catch (err) {
-    res.status(500).json({ message: 'DB Connection Failed ❌', error: err.message });
-  }
+// Start server (directly here since you don’t want server.js)
+app.listen(server.port, () => {
+  console.log(`🚀 Server running on port ${server.port}`);
 });
-
-// Routes
-app.use('/api/bills', billRoutes);
-app.use('/api/pc-doc-ref', referencesRoutes);
-app.use('/api/deleted-bills', deletedBillRoutes);
-
-app.listen(3000, () => console.log('Server started'));

@@ -1,28 +1,22 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+// middleware/authMiddleware.js
+const jwt = require("jsonwebtoken");
 
-const authenticateJWT = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
+const authMiddleware = (req, res, next) => {
+  const token =
+    req.cookies?.jwt || // from cookies
+    req.headers["authorization"]?.split(" ")[1]; // from Bearer token
 
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: "Access denied. No token provided." });
+  }
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      const user = await User.findByPk(decoded.id);
-
-      if (!user) {
-        return res.status(401).json({ message: 'User not found' });
-      }
-
-      req.user = user;
-      next();
-    } catch (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
-  } else {
-    res.status(401).json({ message: 'Authorization header missing' });
+  try {
+    const decoded = jwt.verify(token, "hello123"); // same secret as in login
+    req.user = decoded; // store decoded payload in request
+    next();
+  } catch (err) {
+    res.status(403).json({ message: "Invalid or expired token" });
   }
 };
 
-module.exports = { authenticateJWT };
+module.exports = authMiddleware;

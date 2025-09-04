@@ -1,216 +1,263 @@
-const Bill = require('../models/bill');
-const DeletedBill = require('../models/deletedBill');
-const { Op, fn, col, where } = require('sequelize');
+const Bill = require("../models/Bill_v2");
+const Doctor = require("../models/Doctor");
+const PrimaryCare = require("../models/PrimaryCare");
+const { Op, fn, col, where } = require("sequelize");
+const { parseMonthParam } = require("../utils/helpers/dateHelper");
+const { success, error } = require("../utils/helpers/responseHelper");
 
+// Create a new bill
 exports.createBill = async (req, res) => {
   try {
     const bill = await Bill.create(req.body);
-    res.status(201).json({ message: 'Bill saved', insertId: bill.id });
+    return success(res, { insertId: bill.id }, "Bill saved");
   } catch (err) {
-    res.status(500).json({ message: 'DB Error', error: err });
+    return error(res, err);
   }
 };
 
+// Get all bills (optionally filter by date)
 exports.getAllBills = async (req, res) => {
   try {
-    const date = req.params.date || req.query.date;
-    console.log(req.params.date)
-    const where = date ? { date } : {};
+    const date = req.query.date;
+    const filter = { archive: false }; // exclude archived bills
+    if (date) filter.date = date;
+
     const bills = await Bill.findAll({
-      where,
-      order: [['date', 'DESC'], ['time', 'DESC']],
+      where: filter,
+      order: [
+        ["date", "DESC"],
+        ["time", "DESC"],
+      ],
+      paranoid: true, // ✅ exclude soft-deleted bills
     });
-    res.status(200).json(bills);
-    console.log(bills)
+
+    return success(res, bills);
   } catch (err) {
-      console.error('Error fetching bills:', err);
-    res.status(500).json({ message: 'DB Error', error: err });
+    return error(res, err);
   }
 };
 
-exports.getLastReceipt = async (req, res) => {
+// Get archived bills
+exports.getArchivedBills = async (req, res) => {
   try {
-    const bill = await Bill.findOne({
-      order: [['date', 'DESC'], ['time', 'DESC']],
+    const bills = await Bill.findAll({
+      where: { archive: true },
+      order: [["archivedAt", "DESC"]],
     });
-    if (!bill) return res.status(404).json({ message: 'No bills found' });
-    res.status(200).json(bill);
+    return success(res, bills);
   } catch (err) {
-    res.status(500).json({ message: 'DB Error', error: err });
+    return error(res, err);
   }
 };
 
+// Archive a bill
+exports.archiveBill = async (req, res) => {
+  try {
+    const bill = await Bill.findByPk(req.params.id);
+    if (!bill) return error(res, "Bill not found", 404);
+
+    await bill.update({ archive: true, archivedAt: new Date() });
+    return success(res, bill, "Bill archived successfully");
+  } catch (err) {
+    return error(res, err);
+  }
+};
+
+// Restore an archived bill
+exports.restoreBill = async (req, res) => {
+  try {
+    const bill = await Bill.findByPk(req.params.id);
+    if (!bill) return error(res, "Bill not found", 404);
+
+    await bill.update({ archive: false });
+    return success(res, bill, "Bill restored successfully");
+  } catch (err) {
+    return error(res, err);
+  }
+};
+
+// Clear due of a bill
+exports.clearBillDue = async (req, res) => {
+  try {
+    const bill = await Bill.findByPk(req.params.id);
+    if (!bill) return error(res, "Bill not found", 404);
+
+    await bill.update({ due: 0, receivedAmount: bill.totalAmount });
+    return success(res, bill, "Bill due cleared");
+  } catch (err) {
+    return error(res, err);
+  }
+};
+
+// Delete a bill (hard delete)
+exports.deleteBill = async (req, res) => {
+  try {
+    const bill = await Bill.findByPk(req.params.id);
+    if (!bill) return error(res, "Bill not found", 404);
+
+    await bill.destroy(); // soft delete -> sets deletedAt
+    return success(res, null, "Bill archived (soft deleted) successfully");
+  } catch (err) {
+    return error(res, err);
+  }
+};
+
+// Monthly stats
 exports.billStats = async (req, res) => {
-  const monthParam = req.query.month;
+  const parsed = parseMonthParam(req.query.month);
+  if (parsed.error) return error(res, parsed.error, 400);
 
-  if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
-    return res.status(400).json({ message: 'Invalid month format. Use YYYY-MM' });
-  }
-
-  const [year, month] = monthParam.split('-').map(Number);
+  const { year, month } = parsed;
 
   try {
-    const totalMonthlyAmount = await Bill.sum('totalAmount', {
+    const totalMonthlyAmount = await Bill.sum("totalAmount", {
       where: {
+        archive: false,
         [Op.and]: [
-          where(fn('MONTH', col('date')), month),
-          where(fn('YEAR', col('date')), year),
-        ]
-      }
+          where(fn("MONTH", col("date")), month),
+          where(fn("YEAR", col("date")), year),
+        ],
+      },
     });
 
     const totalByType = await Bill.findAll({
-      attributes: [
-        'billType',
-        [fn('SUM', col('totalAmount')), 'totalByType']
-      ],
+      attributes: ["billType", [fn("SUM", col("totalAmount")), "totalByType"]],
       where: {
+        archive: false,
         [Op.and]: [
-          where(fn('MONTH', col('date')), month),
-          where(fn('YEAR', col('date')), year),
-        ]
+          where(fn("MONTH", col("date")), month),
+          where(fn("YEAR", col("date")), year),
+        ],
       },
-      group: ['billType']
+      group: ["billType"],
     });
 
     const dailyTotals = await Bill.findAll({
       attributes: [
-        [fn('DATE', col('date')), 'day'],
-        [fn('SUM', col('totalAmount')), 'totalPerDay']
+        [fn("DATE", col("date")), "day"],
+        [fn("SUM", col("totalAmount")), "totalPerDay"],
       ],
       where: {
+        archive: false,
         [Op.and]: [
-          where(fn('MONTH', col('date')), month),
-          where(fn('YEAR', col('date')), year),
-        ]
+          where(fn("MONTH", col("date")), month),
+          where(fn("YEAR", col("date")), year),
+        ],
       },
-      group: [fn('DATE', col('date'))],
-      order: [[fn('DATE', col('date')), 'ASC']]
+      group: [fn("DATE", col("date"))],
+      order: [[fn("DATE", col("date")), "ASC"]],
     });
 
     const dailyTotalsByType = await Bill.findAll({
       attributes: [
-        [fn('DATE', col('date')), 'day'],
-        'billType',
-        [fn('SUM', col('totalAmount')), 'totalPerDayByType']
+        [fn("DATE", col("date")), "day"],
+        "billType",
+        [fn("SUM", col("totalAmount")), "totalPerDayByType"],
       ],
       where: {
+        archive: false,
         [Op.and]: [
-          where(fn('MONTH', col('date')), month),
-          where(fn('YEAR', col('date')), year),
-        ]
+          where(fn("MONTH", col("date")), month),
+          where(fn("YEAR", col("date")), year),
+        ],
       },
-      group: [fn('DATE', col('date')), 'billType'],
-      order: [[fn('DATE', col('date')), 'ASC'], ['billType', 'ASC']]
+      group: [fn("DATE", col("date")), "billType"],
+      order: [
+        [fn("DATE", col("date")), "ASC"],
+        ["billType", "ASC"],
+      ],
     });
 
-    res.status(200).json({
+    return success(res, {
       totalMonthlyAmount,
       totalByType,
       dailyTotals,
       dailyTotalsByType,
     });
   } catch (err) {
-    res.status(500).json({ message: 'DB Error', error: err.message });
+    return error(res, err);
   }
 };
 
+// Referral earnings (Doctor + PrimaryCare)
 exports.referralEarnings = async (req, res) => {
-  const monthParam = req.query.month;
+  const { year, month, error: parseError } = parseMonthParam(req.query.month);
 
-  // Validate month format
-  if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
-    return res.status(400).json({ message: 'Invalid month format. Use YYYY-MM' });
+  if (parseError) {
+    return error(res, parseError, 400, "Error");
   }
 
-  const [year, month] = monthParam.split('-').map(Number);
-
   try {
-    // Doctor Referrals
+    // Doctor referrals
     const doctorReferrals = await Bill.findAll({
       attributes: [
-        ['referralDoctorName', 'name'],
-        [fn('SUM', col('referralDoctorFee')), 'totalEarnings'],
+        [col("doctorReferral.name"), "name"],
+        [fn("SUM", col("doctorReferral.fee")), "totalEarnings"],
+      ],
+      include: [
+        {
+          model: Doctor,
+          as: "doctorReferral",
+          attributes: [],
+        },
       ],
       where: {
-        referralDoctorName: { [Op.ne]: null },
+        doctorReferralId: { [Op.ne]: null },
+        archive: false,
         [Op.and]: [
-          where(fn('MONTH', col('date')), month),
-          where(fn('YEAR', col('date')), year),
+          where(fn("MONTH", col("Bill.date")), month),
+          where(fn("YEAR", col("Bill.date")), year),
         ],
       },
-      group: ['referralDoctorName'],
+      group: ["doctorReferral.id"],
+      raw: true,
     });
 
-    // PC Referrals
+    // Primary care referrals
     const pcReferrals = await Bill.findAll({
       attributes: [
-        ['referralPcName', 'name'],
-        [fn('SUM', col('referralPcFee')), 'totalEarnings'],
+        [col("pcReferral.name"), "name"],
+        [fn("SUM", col("pcReferral.fee")), "totalEarnings"],
+      ],
+      include: [
+        {
+          model: PrimaryCare,
+          as: "pcReferral",
+          attributes: [],
+        },
       ],
       where: {
-        referralPcName: { [Op.ne]: null },
+        pcReferralId: { [Op.ne]: null },
+        archive: false,
         [Op.and]: [
-          where(fn('MONTH', col('date')), month),
-          where(fn('YEAR', col('date')), year),
+          where(fn("MONTH", col("Bill.date")), month),
+          where(fn("YEAR", col("Bill.date")), year),
         ],
       },
-      group: ['referralPcName'],
+      group: ["pcReferral.id"],
+      raw: true,
     });
 
-    // Total distributed earnings
-    const total = [...doctorReferrals, ...pcReferrals].reduce(
-      (sum, record) => sum + parseFloat(record.get('totalEarnings') || 0),
+    // Merge results
+    const referrals = [
+      ...doctorReferrals.map((r) => ({ ...r, type: "doctor" })),
+      ...pcReferrals.map((r) => ({ ...r, type: "primaryCare" })),
+    ];
+
+    const total = referrals.reduce(
+      (sum, r) => sum + parseFloat(r.totalEarnings || 0),
       0
     );
 
-    res.status(200).json({
-      doctorReferrals,
-      pcReferrals,
+    return success(res, {
+      referrals,
       totalDistributedAmount: total,
     });
   } catch (err) {
-    res.status(500).json({ message: 'DB Error', error: err.message });
+    return error(res, err);
   }
 };
 
-exports.deleteBill = async (req, res) => {
-  try {
-    const billId = req.params.id;
-    const bill = await Bill.findByPk(billId);
-    if (!bill) return res.status(404).json({ message: 'Bill not found' });
-
-    // Insert the bill data into deleted_bills with deletedAt timestamp
-    await DeletedBill.create({
-      ...bill.get(),
-      deletedAt: new Date(),
-    });
-
-    // Now delete the original bill (force = hard delete)
-    await bill.destroy({ force: true });
-
-    res.status(200).json({ message: 'Bill archived and deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: 'DB Error', error: err.message });
-  }
-};
-
-exports.clearBillDue = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const bill = await Bill.findByPk(id);
-    
-    if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
-    }
-
-    const updatedBill = await bill.update({
-      due: 0,
-      paidAmount: bill.totalAmount
-    });
-
-    res.status(200).json(updatedBill);
-  } catch (err) {
-    res.status(500).json({ message: 'Error clearing due', error: err.message });
-  }
-};
+// grossAmount - discount - extraDiscount = netAmount
+// netAmount = receivedAmount + due
+// totalAmount = netAmount
