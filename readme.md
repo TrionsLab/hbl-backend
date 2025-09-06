@@ -1,127 +1,159 @@
 # Hospital Billing System - Backend
 
-This is the backend service for the Hospital Billing System, built with Node.js, Express, and Sequelize (MySQL). It provides RESTful APIs for authentication, billing, patient management, references, and test management.
+Backend service for Hospital Billing System, built with Node.js, Express, and Sequelize (MySQL). It provides RESTful APIs for authentication, billing, patient management, doctor/primary care management, and test management.
 
 ## Features
 
 - User authentication (JWT-based)
-- Role-based access control (admin, reception)
+- Role-based access control (super_admin, admin, reception)
 - Bill creation and management
-- Patient and test management
-- Reference (doctor/PC) management
+- Patient, doctor, primary care, and test management
 - Modular MVC structure
 
 ## Project Structure
 
 ```
-backend/
-├── index.js                # Entry point
+.
+├── index.js                  # Entry point
 ├── package.json
-├── config/                 # Database configuration
-│   ├── db.js
-│   └── sequelize.js
-├── controllers/            # Route controllers
+├── config/
+│   ├── config.js             # App/server config
+│   ├── db.js                 # MySQL connection (raw)
+│   └── sequelize.js          # Sequelize instance
+├── controllers/
 │   ├── authController.js
 │   ├── billController.js
+│   ├── doctorController.js
+│   ├── patientController.js
+│   ├── primaryCareController.js
 │   ├── receptionController.js
-│   ├── referenceController.js
 │   └── testController.js
-├── middlewares/            # Auth and role middlewares
+├── middlewares/
 │   ├── authMiddleware.js
 │   └── roleMiddleware.js
-├── models/                 # Sequelize models
-│   ├── bill.js
-│   ├── login.js
-│   ├── reference.js
-│   ├── test.js
-│   └── user.js
-└── routes/                 # API route definitions
-    ├── authRoutes.js
-    ├── billRoutes.js
-    ├── patientRoutes.js
-    ├── receptionRoutes.js
-    ├── referenceRoutes.js
-    └── testRoutes.js
+├── models/
+│   ├── Bill_v2.js
+│   ├── Doctor.js
+│   ├── Patient.js
+│   ├── PrimaryCare.js
+│   ├── Referral.js
+│   ├── Test.js
+│   └── User_v2.js
+├── routes/
+│   ├── authRoutes.js
+│   ├── billRoutes.js
+│   ├── doctorRoutes.js
+│   ├── patientRoutes.js
+│   ├── primaryCareRoutes.js
+│   ├── receptionRoutes.js
+│   └── testRoutes.js
+├── utils/
+│   └── helpers/
+│       ├── dateHelper.js
+│       └── responseHelper.js
+├── .env.example
+├── migrations.json
+├── db_script.txt
+└── readme.md
 ```
 
 ## Setup Instructions
 
 1. **Clone the repository**
-
    ```
    git clone <repository-url>
-   cd hospital-billing-system/backend
+   cd hbl-backend
    ```
 
 2. **Install dependencies**
-
    ```
    npm install
    ```
 
 3. **Configure the database**
+   - Edit `.env` or `.env.example` with your MySQL credentials.
 
-   - Edit `config/db.js` and `config/sequelize.js` with your MySQL credentials.
-
-4. **Run database migrations (if any)**
-
-   - Ensure your database is created and accessible.
+4. **Run database migrations**
+   - Use `db_script.txt` or `migrations.json` to set up tables.
 
 5. **Start the server**
-
    ```
    npm start
    ```
-   The server will run on the port specified in your environment or default (e.g., 3000).
+   The server runs on the port specified in `.env` (default: 3000).
 
 ## API Endpoints
 
 ### Authentication
-
 - `POST /api/auth/login` - User login
 - `POST /api/auth/register` - Register new user (admin only)
+- `POST /api/auth/logout` - Logout
 
 ### Billing
-
 - `POST /api/bills` - Create a new bill
 - `GET /api/bills` - List all bills
-- `GET /api/bills/:id` - Get bill by ID
+- `GET /api/bills/archived` - List archived bills
+- `GET /api/bills/stats` - Monthly stats
+- `GET /api/bills/referral-earnings` - Referral earnings
+- `PUT /api/bills/:id/archive` - Archive bill
+- `PUT /api/bills/:id/restore` - Restore bill
+- `PUT /api/bills/:id/clear-due` - Clear bill due
+- `DELETE /api/bills/:id` - Delete bill
 
 ### Patients
+- `POST /api/patient` - Add patient
+- `GET /api/patient` - List patients
 
-- `GET /api/patients` - List patients
-- `GET /api/patients/:id` - Get patient details
+### Doctors
+- `POST /api/doctors` - Add doctor
+- `GET /api/doctors` - List doctors
+- `GET /api/doctors/:id` - Get doctor by ID
+- `PUT /api/doctors/:id` - Update doctor
+- `DELETE /api/doctors/:id` - Delete doctor
 
-### References
+### Primary Care
+- `POST /api/primary-care` - Add primary care
+- `GET /api/primary-care` - List all
+- `GET /api/primary-care/:id` - Get by ID
+- `PUT /api/primary-care/:id` - Update
+- `DELETE /api/primary-care/:id` - Delete (soft)
 
-- `GET /api/references` - List all references (doctors/PCs)
-- `POST /api/references` - Add a new reference
+### Reception
+- `POST /api/receptions` - Add reception
+- `GET /api/receptions` - List receptions
+- `PUT /api/receptions/:id` - Update reception
+- `DELETE /api/receptions/:id` - Delete reception
 
 ### Tests
-
-- `GET /api/tests` - List all tests
-- `POST /api/tests` - Add a new test
+- `POST /api/tests` - Add test
+- `GET /api/tests` - List tests
+- `PUT /api/tests/:id` - Update test
+- `DELETE /api/tests/:id` - Delete test
 
 ## Environment Variables
 
-Create a `.env` file in the backend directory with the following (example):
+Create a `.env` file in the backend directory:
 
 ```
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=yourpassword
-DB_NAME=hospital_billing
-JWT_SECRET=your_jwt_secret
+DB_NAME=clinic
+DB_PORT=3306
 PORT=3000
+JWT_SECRET=your_jwt_secret
 ```
 
 ## Model Overview
 
-- **User:** email, password, username, role
-- **Bill:** patient info, doctor, tests, amounts, discounts, etc.
-- **Reference:** name, code, type (doctor/PC)
+- **User_v2:** username, email, password, role (super_admin, admin, reception)
+- **Bill_v2:** idNo, date, time, billType, grossAmount, discount, extraDiscount, due, totalAmount, receivedAmount, archive, archivedAt, deletedAt, patientId, receptionistId, visitedDoctorId, doctorReferralId, pcReferralId
+- **Doctor:** name, specialization, fee
+- **Patient:** name, age, ageMonths, gender, phone
+- **PrimaryCare:** name, address, fee, deletedAt
+- **Referral:** name, type (doctor/pc), code, fee
 - **Test:** code, description, rate
 
 ## License
 
-This project is for educational and internal use. Please check with the repository owner for licensing
+This project is for educational and internal use. Please check with the repository owner for
