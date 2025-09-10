@@ -10,7 +10,7 @@ const Referral = sequelize.define(
     fee: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
   },
   {
-    tableName: "referrals_v2",
+    tableName: "referrals",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

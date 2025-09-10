@@ -11,7 +11,7 @@ const Patient = sequelize.define(
     phone: DataTypes.STRING,
   },
   {
-    tableName: "patients_v2",
+    tableName: "patients",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
