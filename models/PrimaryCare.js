@@ -10,7 +10,7 @@ const PrimaryCare = sequelize.define(
     deletedAt: { type: DataTypes.DATE, allowNull: true }, // soft delete column
   },
   {
-    tableName: "primary_care_v2",
+    tableName: "primary_care",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

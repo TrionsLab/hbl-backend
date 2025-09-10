@@ -9,7 +9,7 @@ const Doctor = sequelize.define(
     fee: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
   },
   {
-    tableName: "doctors_v2",
+    tableName: "doctors",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
