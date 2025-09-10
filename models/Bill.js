@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
 const Patient = require("./Patient");
-const User = require("./User_v2");
+const User = require("./User");
 const Doctor = require("./Doctor");
 const PrimaryCare = require("./PrimaryCare");
 
@@ -29,7 +29,7 @@ const Bill = sequelize.define(
     deletedAt: { type: DataTypes.DATE, allowNull: true },
   },
   {
-    tableName: "bills_v2",
+    tableName: "bills",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

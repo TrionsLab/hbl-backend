@@ -7,18 +7,18 @@ const roleMiddleware = (allowedRoles = []) => {
         req.cookies?.jwt ||
         req.headers["authorization"]?.split(" ")[1]; 
 
-      if (!token) {
-        return res.status(401).json({ message: "No token provided" });
-      }
+      // if (!token) {
+      //   return res.status(401).json({ message: "No token provided" });
+      // }
 
-      const decodedToken = jwt.verify(token, "hello123"); 
-      req.user = decodedToken; 
+      // const decodedToken = jwt.verify(token, "hello123"); 
+      // req.user = decodedToken; 
 
-      if (!allowedRoles.includes(decodedToken.role)) {
-        return res
-          .status(403)
-          .json({ message: "Forbidden: insufficient rights" });
-      }
+      // if (!allowedRoles.includes(decodedToken.role)) {
+      //   return res
+      //     .status(403)
+      //     .json({ message: "Forbidden: insufficient rights" });
+      // }
 
       next();
     } catch (err) {

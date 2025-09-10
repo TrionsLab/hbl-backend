@@ -3,24 +3,24 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { success, error } = require("../utils/helpers/responseHelper");
 
-exports.register = async (req, res) => {
-  const { username, email, password, role } = req.body;
+// exports.register = async (req, res) => {
+//   const { username, email, password, role } = req.body;
 
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
+//   try {
+//     const hashedPassword = await bcrypt.hash(password, 10);
 
-    db.query(
-      "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-      [username, email, hashedPassword, role],
-      (err, result) => {
-        if (err) return error(res, err, 500, "User registration failed");
-        return success(res, { insertId: result.insertId }, "User registered successfully");
-      }
-    );
-  } catch (err) {
-    return error(res, err, 500, "User registration failed");
-  }
-};
+//     db.query(
+//       "INSERT INTO users_v2 (username, email, password, role) VALUES (?, ?, ?, ?)",
+//       [username, email, hashedPassword, role],
+//       (err, result) => {
+//         if (err) return error(res, err, 500, "User registration failed");
+//         return success(res, { insertId: result.insertId }, "User registered successfully");
+//       }
+//     );
+//   } catch (err) {
+//     return error(res, err, 500, "User registration failed");
+//   }
+// };
 
 exports.login = (req, res) => {
   const { email, password } = req.body;

@@ -1,4 +1,4 @@
-const Bill = require("../models/Bill_v2");
+const Bill = require("../models/Bill");
 const Doctor = require("../models/Doctor");
 const PrimaryCare = require("../models/PrimaryCare");
 const { Op, fn, col, where } = require("sequelize");
