@@ -39,7 +39,26 @@ const addPatient = async (req, res) => {
   }
 };
 
+// ✅ Get patient by phone number
+const getPatientByPhone = async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const patient = await Patient.findOne({ where: { phone } });
+    if (!patient) {
+      return error(res, "Patient not found", 404);
+    }
+    return success(res, patient, "Patient fetched successfully");
+  } catch (err) {
+    console.error("Error fetching patient by phone:", err);
+    return error(res, err, 500, "Failed to fetch patient");
+  }
+};
+
+
 module.exports = {
   getAllPatients,
   addPatient,
+  getPatientByPhone,
 };
+
+

@@ -6,5 +6,6 @@ const roleMiddleware = require('../middlewares/roleMiddleware');
 
 router.post('/', authMiddleware, roleMiddleware(["admin", "receptionist"]), patientController.addPatient);
 router.get('/', authMiddleware, roleMiddleware(["admin", "receptionist"]), patientController.getAllPatients);
+router.get('/:phone', authMiddleware, roleMiddleware(["admin", "receptionist"]), patientController.getPatientByPhone);
 
 module.exports = router;

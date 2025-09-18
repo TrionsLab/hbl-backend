@@ -14,6 +14,8 @@ const Bill = sequelize.define(
 
     billType: { type: DataTypes.STRING, allowNull: false },
 
+    doctorReferralFee: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
+    pcReferralFee: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
     grossAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
     discount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
     extraDiscount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
@@ -21,12 +23,15 @@ const Bill = sequelize.define(
     totalAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
     receivedAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },
 
-    archive: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
+    archive: { type: DataTypes.BOOLEAN, defaultValue: false },
     archivedAt: { type: DataTypes.DATE, allowNull: true },
     deletedAt: { type: DataTypes.DATE, allowNull: true },
+
+    selectedTests: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: []
+    }
   },
   {
     tableName: "bills",
@@ -40,17 +45,8 @@ const Bill = sequelize.define(
 // Associations
 Bill.belongsTo(Patient, { foreignKey: "patientId", as: "patient" });
 Bill.belongsTo(User, { foreignKey: "receptionistId", as: "receptionist" });
-
-// Replaced doctorId → visitedDoctorId
 Bill.belongsTo(Doctor, { foreignKey: "visitedDoctorId", as: "visitedDoctor" });
-
-// Replaced referralId → doctorReferralId (references Doctor)
-Bill.belongsTo(Doctor, {
-  foreignKey: "doctorReferralId",
-  as: "doctorReferral",
-});
-
-// New referral → pcReferralId (references PrimaryCare)
+Bill.belongsTo(Doctor, { foreignKey: "doctorReferralId", as: "doctorReferral" });
 Bill.belongsTo(PrimaryCare, { foreignKey: "pcReferralId", as: "pcReferral" });
 
 module.exports = Bill;
