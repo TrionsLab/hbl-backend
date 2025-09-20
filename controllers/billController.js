@@ -227,76 +227,129 @@ exports.billStats = async (req, res) => {
 
 // Referral earnings (Doctor + PrimaryCare)
 exports.referralEarnings = async (req, res) => {
-  const { year, month, error: parseError } = parseMonthParam(req.query.month);
-
-  if (parseError) {
-    return error(res, parseError, 400, "Error");
-  }
-
   try {
-    // Doctor referrals
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return error(
+        res,
+        "Please provide both 'from' and 'to' query params.",
+        400,
+        "Error"
+      );
+    }
+
+    // Doctor referrals (group + details)
     const doctorReferrals = await Bill.findAll({
       attributes: [
-        [col("doctorReferral.name"), "name"],
-        [fn("SUM", col("doctorReferral.fee")), "totalEarnings"],
-      ],
-      include: [
-        {
-          model: Doctor,
-          as: "doctorReferral",
-          attributes: [],
-        },
+        "doctorReferralId",
+        [fn("SUM", col("doctorReferralFee")), "totalEarnings"],
       ],
       where: {
         doctorReferralId: { [Op.ne]: null },
         archive: false,
-        [Op.and]: [
-          where(fn("MONTH", col("Bill.date")), month),
-          where(fn("YEAR", col("Bill.date")), year),
-        ],
+        date: { [Op.between]: [from, to] },
       },
-      group: ["doctorReferral.id"],
+      group: ["doctorReferralId"],
       raw: true,
     });
 
-    // Primary care referrals
+    // Fetch all bills for doctors in range
+    const doctorBills = await Bill.findAll({
+      where: {
+        doctorReferralId: { [Op.ne]: null },
+        archive: false,
+        date: { [Op.between]: [from, to] },
+      },
+      include: [
+        { model: Doctor, as: "doctorReferral", attributes: ["id", "name"] },
+      ],
+    });
+
+    // Attach grouped bills
+    const doctorReferralsWithBills = doctorReferrals.map((ref) => {
+      const bills = doctorBills
+        .filter((b) => b.doctorReferralId === ref.doctorReferralId)
+        .map((b) => ({
+          id: b.id,
+          idNo: b.idNo,
+          date: b.date,
+          patientId: b.patientId,
+          doctorReferralFee: b.doctorReferralFee,
+          grossAmount: b.grossAmount,
+        }));
+
+      const doctor = doctorBills.find(
+        (b) => b.doctorReferralId === ref.doctorReferralId
+      )?.doctorReferral;
+
+      return {
+        id: ref.doctorReferralId,
+        name: doctor?.name || "Unknown Doctor",
+        totalEarnings: parseFloat(ref.totalEarnings || 0),
+        bills,
+      };
+    });
+
+    // PrimaryCare referrals (group + details)
     const pcReferrals = await Bill.findAll({
       attributes: [
-        [col("pcReferral.name"), "name"],
-        [fn("SUM", col("pcReferral.fee")), "totalEarnings"],
-      ],
-      include: [
-        {
-          model: PrimaryCare,
-          as: "pcReferral",
-          attributes: [],
-        },
+        "pcReferralId",
+        [fn("SUM", col("pcReferralFee")), "totalEarnings"],
       ],
       where: {
         pcReferralId: { [Op.ne]: null },
         archive: false,
-        [Op.and]: [
-          where(fn("MONTH", col("Bill.date")), month),
-          where(fn("YEAR", col("Bill.date")), year),
-        ],
+        date: { [Op.between]: [from, to] },
       },
-      group: ["pcReferral.id"],
+      group: ["pcReferralId"],
       raw: true,
     });
 
-    // Merge results
-    const referrals = [
-      ...doctorReferrals.map((r) => ({ ...r, type: "doctor" })),
-      ...pcReferrals.map((r) => ({ ...r, type: "primaryCare" })),
-    ];
+    const pcBills = await Bill.findAll({
+      where: {
+        pcReferralId: { [Op.ne]: null },
+        archive: false,
+        date: { [Op.between]: [from, to] },
+      },
+      include: [
+        { model: PrimaryCare, as: "pcReferral", attributes: ["id", "name"] },
+      ],
+    });
 
-    const total = referrals.reduce(
-      (sum, r) => sum + parseFloat(r.totalEarnings || 0),
+    const pcReferralsWithBills = pcReferrals.map((ref) => {
+      const bills = pcBills
+        .filter((b) => b.pcReferralId === ref.pcReferralId)
+        .map((b) => ({
+          id: b.id,
+          idNo: b.idNo,
+          date: b.date,
+          patientId: b.patientId,
+          pcReferralFee: b.pcReferralFee,
+          grossAmount: b.grossAmount,
+        }));
+
+      const pc = pcBills.find(
+        (b) => b.pcReferralId === ref.pcReferralId
+      )?.pcReferral;
+
+      return {
+        id: ref.pcReferralId,
+        name: pc?.name || "Unknown PC",
+        totalEarnings: parseFloat(ref.totalEarnings || 0),
+        bills,
+      };
+    });
+
+    // Total distributed amount
+    const total = [...doctorReferralsWithBills, ...pcReferralsWithBills].reduce(
+      (sum, r) => sum + r.totalEarnings,
       0
     );
 
     return success(res, {
-      referrals,
+      doctorReferrals: doctorReferralsWithBills,
+      pcReferrals: pcReferralsWithBills,
       totalDistributedAmount: total,
     });
   } catch (err) {
