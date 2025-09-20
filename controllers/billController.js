@@ -2,6 +2,8 @@ const Bill = require("../models/Bill");
 const Doctor = require("../models/Doctor");
 const Patient = require("../models/Patient");
 const PrimaryCare = require("../models/PrimaryCare");
+const User = require("../models/User");
+
 const { Op, fn, col, where } = require("sequelize");
 const { parseMonthParam } = require("../utils/helpers/dateHelper");
 const { success, error } = require("../utils/helpers/responseHelper");
@@ -75,6 +77,32 @@ exports.getAllBills = async (req, res) => {
         ["time", "DESC"],
       ],
       paranoid: true, // ✅ exclude soft-deleted bills
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+        },
+        {
+          model: User,
+          as: "receptionist",
+          attributes: ["id", "username", "email"],
+        },
+        {
+          model: Doctor,
+          as: "visitedDoctor",
+          attributes: ["id", "name", "specialization"],
+        },
+        {
+          model: Doctor,
+          as: "doctorReferral",
+          attributes: ["id", "name", "specialization"],
+        },
+        {
+          model: PrimaryCare,
+          as: "pcReferral",
+          attributes: ["id", "name"],
+        },
+      ],
     });
 
     return success(res, bills);
@@ -89,7 +117,35 @@ exports.getArchivedBills = async (req, res) => {
     const bills = await Bill.findAll({
       where: { archive: true },
       order: [["archivedAt", "DESC"]],
+      paranoid: true, // ✅ still exclude soft-deleted
+      include: [
+        {
+          model: Patient,
+          as: "patient",
+        },
+        {
+          model: User,
+          as: "receptionist",
+          attributes: ["id", "username", "email"],
+        },
+        {
+          model: Doctor,
+          as: "visitedDoctor",
+          attributes: ["id", "name", "specialization"],
+        },
+        {
+          model: Doctor,
+          as: "doctorReferral",
+          attributes: ["id", "name", "specialization"],
+        },
+        {
+          model: PrimaryCare,
+          as: "pcReferral",
+          attributes: ["id", "name"],
+        },
+      ],
     });
+
     return success(res, bills);
   } catch (err) {
     return error(res, err);
