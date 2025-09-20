@@ -1,5 +1,6 @@
 const Bill = require("../models/Bill");
 const Doctor = require("../models/Doctor");
+const Patient = require("../models/Patient");
 const PrimaryCare = require("../models/PrimaryCare");
 const { Op, fn, col, where } = require("sequelize");
 const { parseMonthParam } = require("../utils/helpers/dateHelper");
@@ -7,10 +8,55 @@ const { success, error } = require("../utils/helpers/responseHelper");
 
 // Create a new bill
 exports.createBill = async (req, res) => {
+  const t = await Bill.sequelize.transaction();
+
   try {
-    const bill = await Bill.create(req.body);
-    return success(res, { insertId: bill.id }, "Bill saved");
+    let patientId = req.body.patientId;
+
+    // 👇 If no patient in DB, create it first
+    if (!req.body.isPatientFound) {
+      const { name, age, ageMonths, gender, phone } = req.body;
+
+      if (!name || !phone || !gender) {
+        return error(res, "Patient details missing", 400);
+      }
+
+      const newPatient = await Patient.create(
+        { name, age, ageMonths, gender, phone },
+        { transaction: t }
+      );
+      patientId = newPatient.id;
+    }
+
+    // ✅ Only keep allowed Bill fields
+    const billPayload = {
+      idNo: req.body.idNo,
+      date: req.body.date,
+      time: req.body.time,
+      receptionistId: req.body.receptionistId,
+      billType: req.body.billType,
+      grossAmount: req.body.grossAmount,
+      discount: req.body.discount,
+      extraDiscount: req.body.extraDiscount,
+      totalAmount: req.body.totalAmount,
+      receivedAmount: req.body.receivedAmount,
+      due: req.body.due,
+      doctorReferralId: req.body.doctorReferralId,
+      doctorReferralFee: req.body.doctorReferralFee,
+      pcReferralId: req.body.pcReferralId,
+      pcReferralFee: req.body.pcReferralFee,
+      selectedTests: req.body.selectedTests,
+      visitedDoctorId: req.body.visitedDoctorId,
+      doctorFee: req.body.doctorFee,
+      patientId, // 👈 final patientId only
+    };
+
+    const bill = await Bill.create(billPayload, { transaction: t });
+    await t.commit();
+
+    return success(res, { insertId: bill.id, patientId }, "Bill saved");
   } catch (err) {
+    await t.rollback();
     return error(res, err);
   }
 };
