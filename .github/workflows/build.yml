@@ -20,14 +20,12 @@ jobs:
     - name: Install dependencies
       run: npm install
       
-    - name: Commit node_modules
+    # Prevent node_modules from being committed
+    - name: Skip committing node_modules
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add -f node_modules/
-        git diff --staged --quiet || git commit -m "Auto build: $(date)"
-        
-    - name: Push changes
+        echo "Skipping commit of node_modules directory"
+
+    - name: Push changes (if any other files changed)
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
